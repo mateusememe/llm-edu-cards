@@ -55,7 +55,6 @@ def generate_summary(llm: ChatHuggingFace, topic: str, lang_code: str) -> str:
     """
     logger.debug(f"Generating summary for: {topic} in language: {lang_code}")
 
-    # Select the correct prompt template based on language
     try:
         template_string = TRANSLATIONS[lang_code]["summary_template"]
     except KeyError:
@@ -85,7 +84,6 @@ def generate_subtopics(llm: ChatHuggingFace, topic: str, lang_code: str) -> list
     """
     logger.debug(f"Generating subtopics for: {topic} in language: {lang_code}")
 
-    # Select the correct prompt template based on language
     try:
         template_string = TRANSLATIONS[lang_code]["subtopics_template"]
     except KeyError:
