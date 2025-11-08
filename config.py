@@ -1,4 +1,3 @@
-# config.py
 """
 Configuration File
 
@@ -6,30 +5,20 @@ This file stores all constants, model definitions, and prompt templates
 for the application.
 """
 
-# --- Model Definitions ---
-# (Unchanged from previous refactor)
 MODELS = {
     "meta-llama/Meta-Llama-3-8B-Instruct": {
         "repo_id": "meta-llama/Meta-Llama-3-8B-Instruct",
         "temperature": 0.3,
         "max_tokens": 800,
-        # The description is now handled by the TRANSLATIONS dict
     },
 }
 
-# --- UI Defaults ---
-# (Unchanged)
 DEFAULT_TOPIC = "Reinforcement Learning"
-
-
-# --- Text and Translations ---
 
 TRANSLATIONS = {
     "en": {
-        # App Header
         "app_title": "Intelligent Educational Card System",
         "app_subtitle": "Educational content generator with LLMs",
-        # Sidebar
         "settings_header": "Settings",
         "api_token_label": "HuggingFace API Token",
         "api_token_help": "Enter your HuggingFace API Token. You can also set this as HUGGINGFACEHUB_API_TOKEN in your environment.",
@@ -47,7 +36,6 @@ TRANSLATIONS = {
         "project_about_professor": "Professor",
         "clear_history_button": "Clear History",
         "language_select_label": "Language / Idioma",
-        # Main Page
         "explore_topic_header": "Explore a Topic",
         "topic_input_label": "Enter a topic to explore:",
         "topic_input_placeholder": "E.g., Convolutional Neural Networks",
@@ -57,20 +45,24 @@ TRANSLATIONS = {
         "stats_header": "Statistics",
         "stats_cards_generated": "Cards Generated",
         "stats_current_model": "Current Model",
-        # Card Generation / Status
+        "search_help": "Press enter to search cards by topic",
         "spinner_message": "Processing with",
+        "db_stats_expander": "Database Statistics",
+        "stats_total_metric": "Cards Generated",
+        "stats_recent_cards": "Recent Cards (7 days)",
+        "stats_by_language": "By Language",
+        "topic_search_input_placeholder": "Enter a topic to search...",
+        "topic_search_header": "Search Cards",
         "error_no_token": "Please enter your HuggingFace API Token in the sidebar!",
         "error_generation_failed": "API Error: Invalid HuggingFace API Token. Please check your token in the sidebar.",
         "error_generic": "An error occurred",
         "error_check_console": "Please check the console or logs for more details.",
         "success_message": "Cards generated successfully using",
-        # Generated Cards Display
         "generated_cards_header": "Generated Cards",
         "summary_box_header": "Explanatory Summary",
         "subtopics_header": "Related Subtopics",
         "subtopic_card_header": "Subtopic",
         "explore_button": "Explore",
-        # Welcome Message
         "welcome_message": "👆 Enter a topic above and click 'Generate Cards' to start!",
         "example_topics_header": "Example Topics",
         "example_topics": [
@@ -78,11 +70,9 @@ TRANSLATIONS = {
             "Generative Adversarial Networks",
             "Transfer Learning",
         ],
-        # Footer
         "footer_title": "System developed for the Deep Learning course - PPGCC/UNESP",
         "footer_devs": "Developed by",
         "footer_license": "MIT License - Free use for educational purposes",
-        # --- LLM Prompts ---
         "summary_template": """
 You are an expert educator. Explain the concept of "{question}" clearly, objectively, and educationally.
 Your response must be in **English**.
@@ -107,10 +97,8 @@ Be specific and educational. Respond ONLY with the 3 items, with no introduction
 """,
     },
     "pt": {
-        # App Header
         "app_title": "Sistema Inteligente de Cards Educacionais",
         "app_subtitle": "Gerador de conteúdo educacional com LLMs",
-        # Sidebar
         "settings_header": "Configurações",
         "api_token_label": "Token da API HuggingFace",
         "api_token_help": "Insira seu Token da API HuggingFace. Você também pode defini-lo como HUGGINGFACEHUB_API_TOKEN em seu ambiente.",
@@ -128,7 +116,6 @@ Be specific and educational. Respond ONLY with the 3 items, with no introduction
         "project_about_professor": "Professor",
         "clear_history_button": "Limpar Histórico",
         "language_select_label": "Language / Idioma",
-        # Main Page
         "explore_topic_header": "Explore um Tema",
         "topic_input_label": "Digite um tema para explorar:",
         "topic_input_placeholder": "Ex: Redes Neurais Convolucionais",
@@ -138,20 +125,24 @@ Be specific and educational. Respond ONLY with the 3 items, with no introduction
         "stats_header": "Estatísticas",
         "stats_cards_generated": "Cards Gerados",
         "stats_current_model": "Modelo Atual",
-        # Card Generation / Status
+        "db_stats_expander": "Estatísticas do Banco de Dados",
+        "stats_total_metric": "Total de Cards",
+        "stats_recent_cards": "Cards Recentes (7 dias)",
+        "stats_by_language": "Por Idioma",
+        "search_help": "Pressione Enter para buscar cards relacionados ao tema.",
+        "topic_search_input_placeholder": "Digite um tema para buscar...",
+        "topic_search_header": "Buscar cards",
         "spinner_message": "Processando com",
         "error_no_token": "Por favor, insira seu Token da API HuggingFace na barra lateral!",
         "error_generation_failed": "Erro de API: Token da API HuggingFace inválido. Por favor, verifique seu token na barra lateral.",
         "error_generic": "Ocorreu um erro",
         "error_check_console": "Por favor, verifique o console ou os logs para mais detalhes.",
         "success_message": "Cards gerados com sucesso usando",
-        # Generated Cards Display
         "generated_cards_header": "Cards Gerados",
         "summary_box_header": "Resumo Explicativo",
         "subtopics_header": "Subtemas Relacionados",
         "subtopic_card_header": "Subtema",
         "explore_button": "Explorar",
-        # Welcome Message
         "welcome_message": "👆 Digite um tema acima e clique em 'Gerar Cards' para começar!",
         "example_topics_header": "Exemplos de Temas",
         "example_topics": [
@@ -159,11 +150,9 @@ Be specific and educational. Respond ONLY with the 3 items, with no introduction
             "Redes Generativas Adversariais",
             "Aprendizagem por Transferência",
         ],
-        # Footer
         "footer_title": "Sistema desenvolvido para a disciplina de Aprendizado Profundo - PPGCC/UNESP",
         "footer_devs": "Desenvolvido por",
         "footer_license": "Licença MIT - Uso livre para fins educacionais",
-        # --- LLM Prompts ---
         "summary_template": """
 Você é um educador especialista. Explique o conceito de "{question}" de forma clara, objetiva e educacional.
 Sua resposta deve ser em **Português**.
