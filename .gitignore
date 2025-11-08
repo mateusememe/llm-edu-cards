@@ -1,0 +1,6 @@
+llm-cards/
+venv/
+.env
+
+__pycache__
+app.log
