@@ -1,48 +1,45 @@
-"""
-Educational Card Generation System with LLMs
-(Bilingual Version)
-"""
-
 import streamlit as st
 import time
 import logging
 from dotenv import load_dotenv
 import os
 
-# Import modules from our project
-from config import MODELS, DEFAULT_TOPIC, TRANSLATIONS  # Import TRANSLATIONS
+from config import MODELS, DEFAULT_TOPIC, TRANSLATIONS
 from llm_services import initialize_model, generate_summary, generate_subtopics
 from utils import setup_logging, load_css
+from database import CardDatabase
 
-# --- Setup ---
 load_dotenv()
 setup_logging()
 logger = logging.getLogger(__name__)
 
 st.set_page_config(
-    page_title="LLM Edu Card System",  # Title is set dynamically later
+    page_title="LLM Edu Card System",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 load_css("style.css")
 
-# --- Session State Initialization ---
 if "history" not in st.session_state:
     st.session_state.history = []
 if "api_token" not in st.session_state:
     st.session_state.api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN", "")
 if "language" not in st.session_state:
-    st.session_state.language = "pt"  # Default to Portuguese
-# Default topic_input
-if "topic_input" not in st.session_state:  ### ALTERADO ###
+    st.session_state.language = "pt"
+if "topic_input" not in st.session_state:
     st.session_state.topic_input = ""
 
+if "db" not in st.session_state:
+    st.session_state.db = CardDatabase()
+    st.session_state.history = st.session_state.db.get_all_cards(limit=50)
 
-# --- Helper Functions (UI Logic) ---
+if "show_modal" not in st.session_state:
+    st.session_state.show_modal = False
+if "selected_card" not in st.session_state:
+    st.session_state.selected_card = None
 
 
-### NOVO: Função de Callback ###
 def update_topic_input(new_topic):
     """
     Callback function to update the topic input field's session state.
@@ -52,13 +49,9 @@ def update_topic_input(new_topic):
     st.session_state.topic_input = new_topic
 
 
-### FIM NOVO ###
-
-
 def setup_sidebar(lang, current_lang_code):
     """Configures and displays the Streamlit sidebar."""
     with st.sidebar:
-        # Language Selector
         lang_map = {"EN 🇬🇧": "en", "PT 🇧🇷": "pt"}
         lang_options = list(lang_map.keys())
         current_index = (
@@ -75,7 +68,6 @@ def setup_sidebar(lang, current_lang_code):
         )
         selected_lang_code = lang_map[lang_choice]
 
-        # If language changed, update session state and rerun
         if selected_lang_code != current_lang_code:
             st.session_state.language = selected_lang_code
             logger.info(f"Language changed to: {selected_lang_code}")
@@ -83,7 +75,6 @@ def setup_sidebar(lang, current_lang_code):
 
         st.header(f"⚙️ {lang['settings_header']}")
 
-        # API Token Input
         api_token = st.text_input(
             lang["api_token_label"],
             type="password",
@@ -93,17 +84,15 @@ def setup_sidebar(lang, current_lang_code):
         if api_token:
             st.session_state.api_token = api_token
 
-        # Model Selection
         selected_model_key = st.selectbox(
             lang["model_select_label"],
             options=list(MODELS.keys()),
             help=lang["model_select_help"],
         )
-        # Get model description from translations
+
         if selected_model_key == "meta-llama/Meta-Llama-3-8B-Instruct":
             st.info(lang["model_desc_llama"])
 
-        # Advanced Parameters
         with st.expander(f"🔧 {lang['advanced_params_header']}"):
             temperature = st.slider(
                 lang["temperature_label"],
@@ -122,8 +111,23 @@ def setup_sidebar(lang, current_lang_code):
                 help=lang["max_tokens_help"],
             )
 
-        # Project Info
-        st.markdown("---")
+        with st.expander(f"📊 {lang["db_stats_expander"]}"):
+            stats = st.session_state.db.get_statistics()
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric(f"{lang["stats_total_metric"]}", stats["total_cards"])
+                st.metric(f"{lang["stats_recent_cards"]}", stats["recent_cards"])
+
+            with col2:
+                if stats["by_language"]:
+                    st.write(f"**{lang["stats_by_language"]}:**")
+                    for language_code, count in stats[
+                        "by_language"
+                    ].items():
+                        st.write(f"- {language_code.upper()}: {count}")
+
+        st.divider()
         st.markdown(f"### 📚 {lang['project_about_header']}")
         st.markdown(
             f"""
@@ -133,68 +137,100 @@ def setup_sidebar(lang, current_lang_code):
             """
         )
 
-        # Clear History Button
-        if st.button(f"🗑️ {lang['clear_history_button']}", use_container_width=True):
-            st.session_state.history = []
-            st.session_state.topic_input = ""  ### NOVO: Limpa o input também ###
-            logger.info("History cleared by user.")
-            st.rerun()
+        if st.session_state.get("show_clear_confirm", False):
+            st.warning("⚠️ Tem certeza que deseja excluir todo o histórico?")
+            col_confirm1, col_confirm2 = st.columns(2)
+
+            with col_confirm1:
+                if st.button(
+                    "✅ Sim, excluir tudo", key="confirm_yes", use_container_width=True
+                ):
+                    st.session_state.db.clear_all_cards()
+                    st.session_state.history = []
+                    st.session_state.show_clear_confirm = False
+                    logger.info("History cleared by user (including database).")
+                    st.success("Histórico limpo permanentemente!")
+                    st.rerun()
+
+            with col_confirm2:
+                if st.button("❌ Cancelar", key="confirm_no", use_container_width=True):
+                    st.session_state.show_clear_confirm = False
+                    st.rerun()
+        else:
+            if "show_clear_confirm" not in st.session_state:
+                st.session_state.show_clear_confirm = False
 
     return selected_model_key, temperature, max_tokens
 
 
 def display_generated_cards(lang):
-    """Displays the generated content cards from session state."""
+    """Displays the generated content cards in grid layout."""
     if st.session_state.history:
-        st.markdown("---")
-        st.markdown(f"## 📑 {lang['generated_cards_header']}")
+        st.divider()
 
-        for idx, item in enumerate(st.session_state.history):
-            with st.container():
-                # Card Header
-                col_header1, col_header2 = st.columns([3, 1])
-                with col_header1:
-                    st.markdown(f"### 🎯 {item['topic']}")
-                with col_header2:
-                    st.caption(f"🕐 {item['timestamp']} | 🤖 {item['model']}")
+        col_h1, col_h2 = st.columns([3, 1])
+        with col_h1:
+            st.markdown(f"### 📑 {lang['generated_cards_header']}")
+        with col_h2:
+            stats = st.session_state.db.get_statistics()
+            st.metric("Total de Cards", stats["total_cards"])
 
-                # Summary Box
-                st.markdown(
-                    f"""
-                    <div class="summary-box">
-                        <h4>📝 {lang['summary_box_header']}</h4>
-                        <p>{item['summary']}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+        search_query = st.text_input(
+            f"🔍 {lang["topic_search_header"]}",
+            placeholder=f"{lang['topic_search_input_placeholder']}",
+            key="card_search",
+            help=f"{lang['search_help']}",
+        )
 
-                # Subtopics
-                st.markdown(f"#### 🔗 {lang['subtopics_header']}")
-                cols = st.columns(3)
-                for i, subtopic in enumerate(item["subtopics"]):
-                    with cols[i % 3]:
+        if search_query:
+            cards_to_show = st.session_state.db.search_cards(search_query)
+            if not cards_to_show:
+                st.info(f"Nenhum card encontrado para '{search_query}'")
+                return
+        else:
+            cards_to_show = st.session_state.history
+
+        st.markdown('<div class="card-grid">', unsafe_allow_html=True)
+
+        num_cols = 3
+        for i in range(0, len(cards_to_show), num_cols):
+            cols = st.columns(num_cols)
+
+            for j, col in enumerate(cols):
+                card_idx = i + j
+                if card_idx < len(cards_to_show):
+                    card = cards_to_show[card_idx]
+
+                    with col:
                         st.markdown(
                             f"""
                             <div class="card">
-                                <h5>{lang['subtopic_card_header']} {i+1}</h5>
-                                <p>{subtopic}</p>
+                                <div class="card-topic">{card['topic']}</div>
+                                <div class="card-preview">
+                                    {card['summary'][:80]}...
+                                </div>
+                                <div class="card-meta">
+                                    <span>{card.get('timestamp', 'N/A')}</span>
+                                    <span class="card-model">{card['model'].split('/')[-1]}</span>
+                                </div>
                             </div>
-                            """,
+                        """,
                             unsafe_allow_html=True,
                         )
 
-                        ### ALTERADO ###
-                        # Button to explore subtopic
-                        # Usamos on_click para chamar a função de callback
-                        st.button(
-                            f"🔍 {lang['explore_button']}",
-                            key=f"explore_{idx}_{i}",
-                            on_click=update_topic_input,  # Chama o callback
-                            args=(subtopic,),  # Passa o subtema como argumento
-                        )
-                        ### FIM ALTERADO ###
-                st.markdown("---")
+                        if st.button(
+                            "👁️ Ver Detalhes",
+                            key=f"view_{card['id']}",
+                            use_container_width=True,
+                        ):
+                            st.session_state.selected_card = card
+                            st.session_state.show_modal = True
+                            st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if st.session_state.show_modal and st.session_state.selected_card:
+        show_card_modal(st.session_state.selected_card, lang)
 
 
 def display_welcome_message(lang):
@@ -204,20 +240,14 @@ def display_welcome_message(lang):
         st.markdown(f"### 💡 {lang['example_topics_header']}")
         col_ex1, col_ex2, col_ex3 = st.columns(3)
 
-        # Load examples from the correct language
         for col, example in zip([col_ex1, col_ex2, col_ex3], lang["example_topics"]):
             with col:
-
-                ### ALTERADO ###
-                # Usamos on_click para chamar a função de callback
                 st.button(
                     example,
                     use_container_width=True,
-                    on_click=update_topic_input,  # Chama o callback
-                    args=(example,),  # Passa o exemplo como argumento
+                    on_click=update_topic_input,
+                    args=(example,),
                 )
-                ### FIM ALTERADO ###
-
 
 def display_footer(lang):
     """Displays the application footer."""
@@ -251,10 +281,8 @@ def handle_generation(topic, model_name, temp, tokens, api_key, lang, lang_code)
             logger.info(f"Initializing model: {model_name}")
             llm = initialize_model(model_name, api_key, temp, tokens)
 
-            # Generate content - PASS LANGUAGE CODE
             progress_bar = st.progress(0, text=f"{lang['spinner_message']}...")
 
-            # Pass lang_code to service functions
             summary = generate_summary(llm, topic, lang_code)
             progress_bar.progress(50, text=f"{lang['spinner_message']}...")
             subtopics = generate_subtopics(llm, topic, lang_code)
@@ -262,18 +290,30 @@ def handle_generation(topic, model_name, temp, tokens, api_key, lang, lang_code)
             time.sleep(1)
             progress_bar.empty()
 
-            # Store in history
-            st.session_state.history.insert(
-                0,
-                {
-                    "topic": topic,
-                    "summary": summary,
-                    "subtopics": subtopics,
-                    "model": model_name,
-                    "timestamp": time.strftime("%H:%M:%S"),
-                },
+            card_id = st.session_state.db.save_card(
+                topic=topic,
+                summary=summary,
+                subtopics=subtopics,
+                model=model_name,
+                language=lang_code,
+                temperature=temp,
+                max_tokens=tokens,
             )
-            logger.info(f"Successfully generated cards for topic: {topic}")
+
+            card_data = {
+                "id": card_id,
+                "topic": topic,
+                "summary": summary,
+                "subtopics": subtopics,
+                "model": model_name,
+                "language": lang_code,
+                "timestamp": time.strftime("%H:%M:%S"),
+                "temperature": temp,
+                "max_tokens": tokens,
+            }
+
+            st.session_state.history.insert(0, card_data)
+            logger.info(f"Successfully generated and saved card with ID: {card_id}")
             st.success(f"✅ {lang['success_message']} {model_name}!")
 
     except Exception as e:
@@ -287,15 +327,51 @@ def handle_generation(topic, model_name, temp, tokens, api_key, lang, lang_code)
         st.info(lang["error_check_console"])
 
 
-# --- Main Application ---
+@st.dialog(title=" ", width="medium")
+def show_card_modal(card, lang):
+    """Displays a card in modal format using Streamlit dialog"""
+
+    st.markdown(f"## 🎯 {card['topic']}")
+    st.caption(f"🤖 {card['model']} | 🕐 {card.get('timestamp', 'N/A')} | Tokens: {card.get('max_tokens', 'N/A')} | Temperature: {card.get('temperature', 'N/A')}")
+
+    st.markdown("### 📝 Resumo Explicativo")
+    st.info(card["summary"])
+
+    st.divider()
+
+    st.markdown("### 🔗 Subtemas Relacionados")
+
+    cols = st.columns(len(card["subtopics"]))
+    for i, (col, subtopic) in enumerate(zip(cols, card["subtopics"]), 1):
+        with col:
+            st.markdown(f"**Subtema {i}**")
+            st.write(subtopic)
+            if st.button(f"🔍 Explorar", key=f"explore_modal_{card['id']}_{i}"):
+                st.session_state.topic_input = subtopic
+                st.session_state.show_modal = False
+                st.rerun()
+
+    st.divider()
+
+    if st.button(
+        "🗑️ Excluir Card", key=f"delete_modal_{card['id']}", type="secondary"
+    ):
+        st.session_state.db.delete_card(card["id"])
+        st.session_state.history = [
+            c for c in st.session_state.history if c["id"] != card["id"]
+        ]
+        st.session_state.show_modal = False
+        st.success("Card excluído!")
+        time.sleep(0.5)
+        st.rerun()
+
+
 def main():
     """Main function to run the Streamlit app."""
 
-    # Load the correct language dictionary
     lang_code = st.session_state.language
     lang = TRANSLATIONS[lang_code]
 
-    # Set page title dynamically
     st.set_page_config(
         page_title=lang["app_title"],
         page_icon="🎓",
@@ -306,50 +382,35 @@ def main():
     st.title(f"🎓 {lang['app_title']}")
     st.markdown(f"### {lang['app_subtitle']}")
 
-    # Setup sidebar and get parameters
     model_name, temp, tokens = setup_sidebar(lang, lang_code)
 
-    # Main area
-    col1, col2 = st.columns([2, 1])
 
-    with col1:
-        st.markdown(f"### 🔍 {lang['explore_topic_header']}")
+    st.markdown(f"### 🔍 {lang['explore_topic_header']}")
 
-        # O key="topic_input" irá ler automaticamente do st.session_state
-        topic_input = st.text_input(
-            lang["topic_input_label"],
-            placeholder=lang["topic_input_placeholder"],
-            help=lang["topic_input_help"],
-            key="topic_input",  # Não mude isso!
+    topic_input = st.text_input(
+        lang["topic_input_label"],
+        placeholder=lang["topic_input_placeholder"],
+        help=lang["topic_input_help"],
+        key="topic_input",
+    )
+
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        generate_btn = st.button(
+            f"🚀 {lang['generate_button']}",
+            type="primary",
+            use_container_width=True,
         )
 
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            generate_btn = st.button(
-                f"🚀 {lang['generate_button']}",
-                type="primary",
-                use_container_width=True,
-            )
+    with col_btn2:
+        st.button(
+            f"💡 {lang['example_button']}",
+            use_container_width=True,
+            on_click=update_topic_input,
+            args=(DEFAULT_TOPIC,),
+        )
 
-        with col_btn2:
-            ### ALTERADO ###
-            # Botão "Usar Exemplo" também usa o callback
-            st.button(
-                f"💡 {lang['example_button']}",
-                use_container_width=True,
-                on_click=update_topic_input,  # Chama o callback
-                args=(DEFAULT_TOPIC,),  # Passa o tópico padrão
-            )
-            ### FIM ALTERADO ###
-
-    with col2:
-        st.markdown(f"### 📊 {lang['stats_header']}")
-        st.metric(lang["stats_cards_generated"], len(st.session_state.history))
-        st.metric(lang["stats_current_model"], model_name)
-
-    # Handle generation logic
-    # Usamos st.session_state.topic_input aqui, que é a "fonte da verdade"
-    if generate_btn and st.session_state.topic_input:  ### ALTERADO ###
+    if generate_btn and st.session_state.topic_input:
         logger.info(f"User requested generation for: {st.session_state.topic_input}")
         handle_generation(
             st.session_state.topic_input,
@@ -361,13 +422,11 @@ def main():
             lang_code,
         )
 
-    # Display generated cards or welcome message
     if st.session_state.history:
         display_generated_cards(lang)
     else:
         display_welcome_message(lang)
 
-    # Footer
     display_footer(lang)
 
 

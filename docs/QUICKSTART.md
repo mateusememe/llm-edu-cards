@@ -33,7 +33,7 @@ Antes de começar, certifique-se de ter:
 ```bash
 # Clone o repositório
 git clone https://github.com/mateusememe/llm-edu-cards.git
-cd llm-cards-educacionais
+cd llm-edu-cards
 
 # Instale as dependências
 pip install -r requirements.txt
@@ -47,7 +47,7 @@ streamlit run app.py
 ```bash
 # Clone o repositório
 git clone https://github.com/mateusememe/llm-edu-cards.git
-cd llm-cards-educacionais
+cd llm-edu-cards
 
 # Crie ambiente virtual
 python -m venv venv
