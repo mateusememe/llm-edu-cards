@@ -132,28 +132,9 @@ TRANSLATIONS = {
 }
 ```
 
-## 🧪 Testes
-
-Execute o script de testes comparativos:
-
-```bash
-python test.py
-```
-
-O script irá:
-- Testar o modelo com temas pré-definidos
-- Gerar relatório de performance
-- Exportar resultados em JSON
-
 ## 📝 Licença
 
 Este projeto está licenciado sob a **MIT License** - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-### Uso Gratuito e Ilimitado para:
-- ✅ Universidade Estadual Paulista (UNESP)
-- ✅ Alunos da UNESP
-- ✅ Funcionários da UNESP
-- ✅ Fins educacionais e de pesquisa
 
 ## 🎓 Informações Acadêmicas
 
@@ -188,47 +169,3 @@ Este projeto foi desenvolvido colaborativamente como trabalho em grupo para a di
     </td>
   </tr>
 </table>
-
-### Contribuições da Equipe
-
-Todos os membros da equipe contribuíram de forma colaborativa em todas as etapas do projeto:
-
-- 💻 **Desenvolvimento:** Interface, backend, e integração com LLMs
-- 🧪 **Testes:** Script de avaliação e testes manuais
-- 📚 **Documentação:** README, guias e apresentação
-- 🎨 **Design:** Layout e experiência do usuário
-- 📊 **Análise:** Avaliação e comparação de resultados
-
-## 🤝 Contribuindo
-
-Contribuições são bem-vindas! Para contribuir:
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📞 Contato
-
-Para dúvidas sobre o projeto, entre em contato através dos canais oficiais da disciplina no PPGCC-UNESP.
-
-## 🙏 Agradecimentos
-
-- Prof. Dr. Denis Henrique Pinheiro Salvadeo pela orientação
-- PPGCC-UNESP pelo suporte acadêmico
-- HuggingFace pela disponibilização dos modelos
-- Comunidade LangChain e Streamlit pelos frameworks
-
-## 📈 Roadmap
-
-- [x] Interface básica com Streamlit
-- [x] Sistema bilíngue (PT/EN)
-- [x] Integração com modelo LLM
-- [x] Sistema de geração de cards
-- [x] Histórico de exploração
-- [ ] Export de cards em PDF
-- [ ] Sistema de favoritos
-- [ ] Mais modelos LLM
-- [ ] RAG (Retrieval Augmented Generation)
-- [ ] Grafos de conhecimento interativos
