@@ -10,7 +10,19 @@ MODELS = {
         "repo_id": "meta-llama/Meta-Llama-3-8B-Instruct",
         "temperature": 0.3,
         "max_tokens": 800,
+    }, 
+
+    "mistralai/Mistral-7B-Instruct-v0.2": {
+        "repo_id": "mistralai/Mistral-7B-Instruct-v0.2",
+        "temperature": 0.1, 
+        "max_tokens": 1024,
     },
+
+    "google/gemma-2-9b-it": {
+        "repo_id": "google/gemma-2-9b-it",
+        "temperature": 0.5,
+        "max_tokens": 1024, 
+    }
 }
 
 DEFAULT_TOPIC = "Reinforcement Learning"

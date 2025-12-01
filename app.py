@@ -48,9 +48,13 @@ def update_topic_input(new_topic):
     logger.info(f"Setting topic input via callback: {new_topic}")
     st.session_state.topic_input = new_topic
 
-
 def setup_sidebar(lang, current_lang_code):
     """Configures and displays the Streamlit sidebar."""
+    
+    # Callback auxiliar para fechar o modal ao alterar configurações
+    def reset_modal_state():
+        st.session_state.show_modal = False
+
     with st.sidebar:
         lang_map = {"EN 🇬🇧": "en", "PT 🇧🇷": "pt"}
         lang_options = list(lang_map.keys())
@@ -88,43 +92,52 @@ def setup_sidebar(lang, current_lang_code):
             lang["model_select_label"],
             options=list(MODELS.keys()),
             help=lang["model_select_help"],
+            on_change=reset_modal_state, # Fecha o modal se trocar o modelo
         )
 
         if selected_model_key == "meta-llama/Meta-Llama-3-8B-Instruct":
             st.info(lang["model_desc_llama"])
 
         with st.expander(f"🔧 {lang['advanced_params_header']}"):
+            # --- MUDANÇA AQUI ---
+            # Adicionamos 'key' dinâmica baseada no modelo selecionado.
+            # Isso força o slider a ler o valor padrão do 'MODELS' quando o modelo muda.
+            # Adicionamos 'on_change' para fechar o modal se o usuário mexer nos sliders.
             temperature = st.slider(
                 lang["temperature_label"],
-                0.0,
-                1.0,
-                MODELS[selected_model_key]["temperature"],
-                0.1,
+                min_value=0.0,
+                max_value=1.0,
+                value=MODELS[selected_model_key]["temperature"], # Valor padrão do dict
+                step=0.1,
                 help=lang["temperature_help"],
+                key=f"temp_slider_{selected_model_key}", # <--- O SEGREDO ESTÁ AQUI
+                on_change=reset_modal_state # Fecha o modal ao alterar temperatura
             )
+            
             max_tokens = st.slider(
                 lang["max_tokens_label"],
-                100,
-                2048,
-                MODELS[selected_model_key]["max_tokens"],
-                50,
+                min_value=100,
+                max_value=2048,
+                value=MODELS[selected_model_key]["max_tokens"], # Valor padrão do dict
+                step=50,
                 help=lang["max_tokens_help"],
+                key=f"token_slider_{selected_model_key}", # <--- E AQUI TAMBÉM
+                on_change=reset_modal_state # Fecha o modal ao alterar tokens
             )
 
-        with st.expander(f"📊 {lang["db_stats_expander"]}"):
+        with st.expander(f"📊 {lang['db_stats_expander']}"):
+            # (O resto do código permanece igual...)
             stats = st.session_state.db.get_statistics()
 
             col1, col2 = st.columns(2)
             with col1:
-                st.metric(f"{lang["stats_total_metric"]}", stats["total_cards"])
-                st.metric(f"{lang["stats_recent_cards"]}", stats["recent_cards"])
+                st.metric(f"{lang['stats_total_metric']}", stats["total_cards"])
+                st.metric(f"{lang['stats_recent_cards']}", stats["recent_cards"])
 
             with col2:
                 if stats["by_language"]:
-                    st.write(f"**{lang["stats_by_language"]}:**")
-                    for language_code, count in stats[
-                        "by_language"
-                    ].items():
+                    st.write(f"**{lang['stats_by_language']}:**")
+                    for language_code, count in stats["by_language"].items():
                         st.write(f"- {language_code.upper()}: {count}")
 
         st.divider()
@@ -161,7 +174,6 @@ def setup_sidebar(lang, current_lang_code):
                 st.session_state.show_clear_confirm = False
 
     return selected_model_key, temperature, max_tokens
-
 
 def display_generated_cards(lang):
     """Displays the generated content cards in grid layout."""
