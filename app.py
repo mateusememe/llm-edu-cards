@@ -92,37 +92,33 @@ def setup_sidebar(lang, current_lang_code):
             lang["model_select_label"],
             options=list(MODELS.keys()),
             help=lang["model_select_help"],
-            on_change=reset_modal_state, # Fecha o modal se trocar o modelo
+            on_change=reset_modal_state,
         )
 
         if selected_model_key == "meta-llama/Meta-Llama-3-8B-Instruct":
             st.info(lang["model_desc_llama"])
 
         with st.expander(f"🔧 {lang['advanced_params_header']}"):
-            # --- MUDANÇA AQUI ---
-            # Adicionamos 'key' dinâmica baseada no modelo selecionado.
-            # Isso força o slider a ler o valor padrão do 'MODELS' quando o modelo muda.
-            # Adicionamos 'on_change' para fechar o modal se o usuário mexer nos sliders.
             temperature = st.slider(
                 lang["temperature_label"],
                 min_value=0.0,
                 max_value=1.0,
-                value=MODELS[selected_model_key]["temperature"], # Valor padrão do dict
+                value=MODELS[selected_model_key]["temperature"],
                 step=0.1,
                 help=lang["temperature_help"],
-                key=f"temp_slider_{selected_model_key}", # <--- O SEGREDO ESTÁ AQUI
-                on_change=reset_modal_state # Fecha o modal ao alterar temperatura
+                key=f"temp_slider_{selected_model_key}",
+                on_change=reset_modal_state
             )
-            
+
             max_tokens = st.slider(
                 lang["max_tokens_label"],
                 min_value=100,
                 max_value=2048,
-                value=MODELS[selected_model_key]["max_tokens"], # Valor padrão do dict
+                value=MODELS[selected_model_key]["max_tokens"],
                 step=50,
                 help=lang["max_tokens_help"],
-                key=f"token_slider_{selected_model_key}", # <--- E AQUI TAMBÉM
-                on_change=reset_modal_state # Fecha o modal ao alterar tokens
+                key=f"token_slider_{selected_model_key}",
+                on_change=reset_modal_state
             )
 
         with st.expander(f"📊 {lang['db_stats_expander']}"):
